@@ -1,0 +1,19 @@
+{
+    "mqtt" : {
+        "client_id": "miscan",
+        "host": "test.mosquitto.org",
+        "port": 1883,
+        "keepalive": 120,
+        "bind_address": "",
+        "username": null,
+        "password": null,
+        "qos": 0,
+        "topic_namespace": "miscan",
+        "retain": true,
+        "changed_messages_only": true
+    },
+    "devices": {
+        "58:2d:34:00:00:00": "mi1",
+        "a4:c1:38:00:00:00": "mi2"
+    }
+}
