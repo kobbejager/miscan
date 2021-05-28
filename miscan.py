@@ -4,6 +4,8 @@ import os
 import sys
 from bluepy import btle
 
+from devices.base import Device
+
 if os.getenv('C', '1') == '0':
     ANSI_RED = ''
     ANSI_GREEN = ''
@@ -52,7 +54,7 @@ class ScanDelegate(btle.DefaultDelegate):
                     print ('\t' + desc + ': \'' + ANSI_CYAN + val + ANSI_OFF + '\'')               
                 if sdid in [0x16]:
                     print ('\t' + desc + ': \'' + ANSI_CYAN + val + ANSI_OFF + '\'')
-                    parsed = parse(dev.addr, val)
+                    parsed = Device().parse(dev.addr, val)
                     if 'format' in parsed:
                         print ('\t    - format: ' + ANSI_YELLOW + parsed['format'] + ANSI_OFF)
                     if 'temperature' in parsed:
@@ -64,50 +66,6 @@ class ScanDelegate(btle.DefaultDelegate):
             if not dev.scanData:
                 print ('\t(no data)')
             print
-
-
-def parse(mac, data):
-    data = bytes.fromhex(data)
-
-    message = dict()
-
-    # Mijia BLE Broadcasting Protocol
-    # https://github.com/pvvx/ATC_MiThermometer/blob/master/InfoMijiaBLE/Mijia%20BLE%20Broadcasting%20Protocol-Mi%20Beacon%20v4.md
-    if data[0:2] == b'\x95\xfe':
-
-        def from_word(b):
-            return int.from_bytes(b, byteorder='little', signed=True) / 10
-
-        message['format'] = 'XIAOMI'
-        typ = data[13]
-        if typ == 0x04:  # temperature
-            message['temperature'] = from_word(data[16:18])
-        if typ == 0x06:  # humidity
-            message['humidity'] = from_word(data[16:18])
-        if typ == 0x0a:  # battery
-            message['battery'] = data[16]
-        if typ == 0x0d:  # humidity + temperature
-            message['temperature'] = from_word(data[16:18])
-            message['humidity'] = from_word(data[18:20])
-
-    # ATC
-    # atc1441: https://github.com/atc1441/ATC_MiThermometer#advertising-format-of-the-custom-firmware
-    # pvvx: https://github.com/pvvx/ATC_MiThermometer#technical-specifications
-    if data[0:2] == b'\x1a\x18':
-        if len(data) == 17:
-            message['format'] = 'ATC/PVVX'
-            message['temperature'] = int.from_bytes(data[8:10], byteorder='little', signed=True) / 100
-            message['humidity'] = int.from_bytes(data[10:12], byteorder='little') / 100
-            message['battery'] = data[14]
-
-        elif len(data) == 15:
-            message['format'] = 'ATC1441'
-            message['temperature'] = int.from_bytes(data[8:10], byteorder='big', signed=True) / 10
-            message['humidity'] = data[10]
-            message['battery'] = data[11]
-
-    return message
-
 
 
 def main():
