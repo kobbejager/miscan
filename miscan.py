@@ -28,16 +28,19 @@ class ScanDelegate(btle.DefaultDelegate):
             status = "old"
 
         if dev.addr.startswith("a4:c1:38:") or dev.addr.startswith("58:2d:34:"):
-            ts = datetime.now()
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             for (sdid, desc, val) in dev.getScanData():
                 if sdid in [0x8, 0x9]:
-                    log.warning(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {desc}: {val}")               
+                    log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {desc}: {val}")               
                 if sdid in [0x16]:
-                    parsed = Device().parse(dev.addr, val)
-                    log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {parsed}")
-                    on_mi_message(dev.addr, parsed)
+                    message = Device().parse(dev.addr, val)
+                    log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {message}")
+                    message["address"] = dev.addr
+                    message["rssi"] = dev.rssi
+                    message["timestamp"] = ts
+                    on_mi_message(message)
             if not dev.scanData:
-                log.warning(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): no data")
+                log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): no data")
 
 
 # Default settings
@@ -59,7 +62,8 @@ settings = {
 
 def on_mqtt_connect(client, userdata, flags, rc):
     # Send out a message telling we're online
-    log.info(f"[{datetime.now()}] Connected to MQTT with result code {rc}")
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log.info(f"[{ts}] Connected to MQTT with result code {rc}")
     mqtt_client.publish(
         topic=settings['mqtt']['pub_topic_namespace'],
         payload="online",
@@ -67,13 +71,22 @@ def on_mqtt_connect(client, userdata, flags, rc):
         retain=True)
 
 
-def on_mi_message(device, message):
+def on_mi_message(message):
     # Send out messages to the MQTT broker
     mqtt_client.publish(
-        topic=f"{settings['mqtt']['pub_topic_namespace']}/{device}",
+        topic=f"{settings['mqtt']['pub_topic_namespace']}/{message['address']}",
         payload=str(message),
         qos=settings['mqtt']['qos'],
         retain=settings['mqtt']['retain'])
+
+    subtopics = ['temperature', 'humidity', 'battery']
+    for subtopic in subtopics:
+        if subtopic in message:
+            mqtt_client.publish(
+                topic=f"{settings['mqtt']['pub_topic_namespace']}/{message['address']}/{subtopic}",
+                payload=message[subtopic],
+                qos=settings['mqtt']['qos'],
+                retain=settings['mqtt']['retain'])
 
 
 # Set up logging
@@ -128,7 +141,8 @@ def main():
 
     scanner = btle.Scanner(arg.hci).withDelegate(ScanDelegate(arg))
 
-    log.info(f"[{datetime.now()}] Scanning for devices...")
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log.info(f"[{ts}] Scanning for devices...")
     scanner.scan(arg.timeout)
 
 
