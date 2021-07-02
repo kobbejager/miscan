@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 import argparse
 import sys
+import logging
+
 from bluepy import btle
+import paho.mqtt.client as mqtt
 
 from devices.base import Device
 
@@ -50,6 +53,67 @@ class ScanDelegate(btle.DefaultDelegate):
             print
 
 
+# Default settings
+settings = {
+    "mqtt" : {
+        "client_id": "miscan",
+        "host": "test.mosquitto.org",
+        "port": 1883,
+        "keepalive": 60,
+        "bind_address": "",
+        "username": None,
+        "password": None,
+        "qos": 0,
+        "pub_topic_namespace": "miscan",
+        "retain": False
+    }
+}
+
+
+def on_mqtt_connect(client, userdata, flags, rc):
+    # Send out a message telling we're online
+    log.info(f"Connected to MQTT with result code {rc}")
+    mqtt_client.publish(
+        topic=settings['mqtt']['pub_topic_namespace'],
+        payload="online",
+        qos=settings['mqtt']['qos'],
+        retain=True)
+        
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
+
+# Set up paho-mqtt
+mqtt_client = mqtt.Client(
+    client_id=settings['mqtt']['client_id'])
+mqtt_client.on_connect = on_mqtt_connect
+
+if settings['mqtt']['username']:
+    mqtt_client.username_pw_set(
+        settings['mqtt']['username'],
+        settings['mqtt']['password'])
+
+# The will makes sure the device registers as offline when the connection
+# is lost
+mqtt_client.will_set(
+    topic=settings['mqtt']['pub_topic_namespace'],
+    payload="offline",
+    qos=settings['mqtt']['qos'],
+    retain=True)
+
+# Let's not wait for the connection, as it may not succeed if we're not
+# connected to the network or anything. Such is the beauty of MQTT
+mqtt_client.connect_async(
+    host=settings['mqtt']['host'],
+    port=settings['mqtt']['port'],
+    keepalive=settings['mqtt']['keepalive'],
+    bind_address=settings['mqtt']['bind_address'])
+mqtt_client.loop_start()
+
+
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--hci', action='store', type=int, default=0,
@@ -68,7 +132,7 @@ def main():
 
     scanner = btle.Scanner(arg.hci).withDelegate(ScanDelegate(arg))
 
-    print ("Scanning...")
+    log.info("Scanning for devices...")
     scanner.scan(arg.timeout)
 
 
