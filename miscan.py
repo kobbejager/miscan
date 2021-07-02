@@ -2,6 +2,7 @@
 import argparse
 import sys
 import logging
+from datetime import datetime
 
 from bluepy import btle
 import paho.mqtt.client as mqtt
@@ -27,30 +28,16 @@ class ScanDelegate(btle.DefaultDelegate):
             status = "old"
 
         if dev.addr.startswith("a4:c1:38:") or dev.addr.startswith("58:2d:34:"):
-            print ('    Device (%s): %s (%s), %d dBm %s' %
-                (status,
-                    dev.addr,
-                    dev.addrType,
-                    dev.rssi,
-                    ('' if dev.connectable else '(not connectable)'))
-                )
+            ts = datetime.now()
             for (sdid, desc, val) in dev.getScanData():
                 if sdid in [0x8, 0x9]:
-                    print ('\t' + desc + ': \'' + val + '\'')               
+                    log.warning(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {desc}: {val}")               
                 if sdid in [0x16]:
-                    print ('\t' + desc + ': \''  + val + '\'')
                     parsed = Device().parse(dev.addr, val)
-                    if 'format' in parsed:
-                        print ('\t    - format: ' + parsed['format'])
-                    if 'temperature' in parsed:
-                        print ('\t    - temperature: ' + str(parsed['temperature']) + ' °C')
-                    if 'humidity' in parsed:
-                        print ('\t    - humidity: ' + str(parsed['humidity']) + ' %RH')
-                    if 'battery' in parsed:
-                        print ('\t    - battery: ' + str(parsed['battery']) + ' %')
+                    log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {parsed}")
+                    on_mi_message(dev.addr, parsed)
             if not dev.scanData:
-                print ('\t(no data)')
-            print
+                log.warning(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): no data")
 
 
 # Default settings
@@ -72,13 +59,22 @@ settings = {
 
 def on_mqtt_connect(client, userdata, flags, rc):
     # Send out a message telling we're online
-    log.info(f"Connected to MQTT with result code {rc}")
+    log.info(f"[{datetime.now()}] Connected to MQTT with result code {rc}")
     mqtt_client.publish(
         topic=settings['mqtt']['pub_topic_namespace'],
         payload="online",
         qos=settings['mqtt']['qos'],
         retain=True)
-        
+
+
+def on_mi_message(device, message):
+    # Send out messages to the MQTT broker
+    mqtt_client.publish(
+        topic=f"{settings['mqtt']['pub_topic_namespace']}/{device}",
+        payload=str(message),
+        qos=settings['mqtt']['qos'],
+        retain=settings['mqtt']['retain'])
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -132,7 +128,7 @@ def main():
 
     scanner = btle.Scanner(arg.hci).withDelegate(ScanDelegate(arg))
 
-    log.info("Scanning for devices...")
+    log.info(f"[{datetime.now()}] Scanning for devices...")
     scanner.scan(arg.timeout)
 
 
