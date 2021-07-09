@@ -25,26 +25,32 @@ settings = {
         "pub_topic_namespace": "miscan",
         "retain": False
     },
-    "ble": {},
-    "devices": {}
+    "ble": {
+        "hci": 0,                # interface number to scan
+        "timeout": 0,            # scan delay, 0=continuous
+        "messages": "updated"    # show messages: new, updated, all
+    },
+    "devices": {
+        "58:2d:34:33:e4:48": "living_room"
+    }
 }
 
 
 class ScanDelegate(btle.DefaultDelegate):
 
-    def __init__(self, opts):
+    def __init__(self, which_messages):
         btle.DefaultDelegate.__init__(self)
-        self.opts = opts
+        self.which_messages = which_messages
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
         if isNewDev:
             status = "new"
         elif isNewData:
-            if self.opts.new:
+            if self.which_messages == "new":
                 return
             status = "update"
         else:
-            if not self.opts.all:
+            if self.which_messages != "all":
                 return
             status = "old"
 
@@ -60,6 +66,7 @@ class ScanDelegate(btle.DefaultDelegate):
                         message["address"] = dev.addr
                         message["rssi"] = dev.rssi
                         message["timestamp"] = ts
+                        message["status"] = status
                         on_mi_message(message)
             if not dev.scanData:
                 log.debug(f"Message from {dev.addr} ({dev.rssi} dBm): no data")
@@ -77,9 +84,15 @@ def on_mqtt_connect(client, userdata, flags, rc):
 
 
 def on_mi_message(message):
+    # Lookup device name
+    if message['address'] in settings['devices']:
+        device_name = settings['devices'][message['address']]
+    else:
+        device_name = message['address']
+
     # Send out messages to the MQTT broker
     mqtt_client.publish(
-        topic=f"{settings['mqtt']['pub_topic_namespace']}/{message['address']}",
+        topic=f"{settings['mqtt']['pub_topic_namespace']}/{device_name}",
         payload=str(message),
         qos=settings['mqtt']['qos'],
         retain=settings['mqtt']['retain'])
@@ -88,7 +101,7 @@ def on_mi_message(message):
     for subtopic in subtopics:
         if subtopic in message:
             mqtt_client.publish(
-                topic=f"{settings['mqtt']['pub_topic_namespace']}/{message['address']}/{subtopic}",
+                topic=f"{settings['mqtt']['pub_topic_namespace']}/{device_name}/{subtopic}",
                 payload=message[subtopic],
                 qos=settings['mqtt']['qos'],
                 retain=settings['mqtt']['retain'])
@@ -100,14 +113,6 @@ parser.add_argument("-c", "--config", default=None,
                     help="Configuration file")
 parser.add_argument("-l", "--loglevel", default="INFO", 
                     help="Event level to log (default: %(default)s)")
-parser.add_argument('-i', '--hci', action='store', type=int, default=0,
-                    help='Interface number for scan')
-parser.add_argument('-t', '--timeout', action='store', type=int, default=0,
-                    help='Scan delay, 0 for continuous (=default)')
-parser.add_argument('-a', '--all', action='store_true',
-                    help='Display duplicate adv responses, by default show new + updated')
-parser.add_argument('-n', '--new', action='store_true',
-                    help='Display only new adv responses, by default show new + updated')
 args = parser.parse_args()
 
 
@@ -164,11 +169,10 @@ mqtt_client.loop_start()
 
 
 def main():
-    scanner = btle.Scanner(args.hci).withDelegate(ScanDelegate(args))
+    scanner = btle.Scanner(settings['ble']['hci']).withDelegate(ScanDelegate(settings['ble']['messages']))
 
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log.info("Scanning for devices...")
-    scanner.scan(args.timeout)
+    scanner.scan(settings['ble']['timeout'])
 
 
 if __name__ == "__main__":
