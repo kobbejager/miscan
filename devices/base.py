@@ -12,3 +12,6 @@ class Device:
 
         elif data[0:2] == b'\x1a\x18':
             return Atc().parse(data)
+
+        else:
+            return None

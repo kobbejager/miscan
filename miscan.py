@@ -34,11 +34,12 @@ class ScanDelegate(btle.DefaultDelegate):
                     log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {desc}: {val}")               
                 if sdid in [0x16]:
                     message = Device().parse(dev.addr, val)
-                    log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {message}")
-                    message["address"] = dev.addr
-                    message["rssi"] = dev.rssi
-                    message["timestamp"] = ts
-                    on_mi_message(message)
+                    if message: 
+                        log.info(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): {message}")
+                        message["address"] = dev.addr
+                        message["rssi"] = dev.rssi
+                        message["timestamp"] = ts
+                        on_mi_message(message)
             if not dev.scanData:
                 log.debug(f"[{ts}] Message from {dev.addr} ({dev.rssi} dBm): no data")
 
