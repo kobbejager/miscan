@@ -2,6 +2,7 @@
 import argparse
 import sys
 import logging
+import json
 from datetime import datetime
 
 from bluepy import btle
@@ -23,7 +24,9 @@ settings = {
         "qos": 0,
         "pub_topic_namespace": "miscan",
         "retain": False
-    }
+    },
+    "ble": {},
+    "devices": {}
 }
 
 
@@ -93,8 +96,8 @@ def on_mi_message(message):
 
 # Parse arguments
 parser = argparse.ArgumentParser(description="XIAOMI temperature/humidity sensor to MQTT bridge")
-parser.add_argument("-c", "--config", default="config.json", 
-                    help="Configuration file (default: %(default)s)")
+parser.add_argument("-c", "--config", default=None, 
+                    help="Configuration file")
 parser.add_argument("-l", "--loglevel", default="INFO", 
                     help="Event level to log (default: %(default)s)")
 parser.add_argument('-i', '--hci', action='store', type=int, default=0,
@@ -116,6 +119,19 @@ if not isinstance(num_level, int):
 logging.basicConfig(level=num_level, format=log_format)
 log = logging.getLogger(__name__)
 log.info('Loglevel is %s', logging.getLevelName(log.getEffectiveLevel()))
+
+
+# Update default settings from the settings file
+if args.config:
+    with open(args.config) as f:
+        overrides = json.load(f)
+        if 'mqtt' in overrides and isinstance(overrides['mqtt'], dict):
+            settings['mqtt'].update(overrides['mqtt'])
+        if 'ble' in overrides and isinstance(overrides['ble'], dict):
+            settings['ble'].update(overrides['ble'])
+        if 'devices' in overrides and isinstance(overrides['devices'], dict):
+            settings['devices'].update(overrides['devices'])
+
 
 # Set up paho-mqtt
 mqtt_client = mqtt.Client(
