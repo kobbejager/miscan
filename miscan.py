@@ -55,7 +55,6 @@ class ScanDelegate(btle.DefaultDelegate):
             status = "old"
 
         if dev.addr.startswith("a4:c1:38:") or dev.addr.startswith("58:2d:34:"):
-            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             for (sdid, desc, val) in dev.getScanData():
                 if sdid in [0x8, 0x9]:
                     log.debug(f"Message from {dev.addr} ({dev.rssi} dBm): {desc}: {val}")               
@@ -65,7 +64,7 @@ class ScanDelegate(btle.DefaultDelegate):
                         log.debug(f"Message from {dev.addr} ({dev.rssi} dBm): {message}")
                         message["address"] = dev.addr
                         message["rssi"] = dev.rssi
-                        message["timestamp"] = ts
+                        message["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         message["status"] = status
                         on_mi_message(message)
             if not dev.scanData:
@@ -74,7 +73,6 @@ class ScanDelegate(btle.DefaultDelegate):
 
 def on_mqtt_connect(client, userdata, flags, rc):
     # Send out a message telling we're online
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log.info(f"Connected to MQTT with result code {rc}")
     mqtt_client.publish(
         topic=settings['mqtt']['pub_topic_namespace'],
