@@ -91,7 +91,7 @@ def on_mi_message(message):
     # Send out messages to the MQTT broker
     mqtt_client.publish(
         topic=f"{settings['mqtt']['pub_topic_namespace']}/{device_name}",
-        payload=json.dumps(message),
+        payload=json.dump(message),
         qos=settings['mqtt']['qos'],
         retain=settings['mqtt']['retain'])
 
