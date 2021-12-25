@@ -24,7 +24,8 @@ settings = {
         "password": None,
         "qos": 0,
         "pub_topic_namespace": "miscan",
-        "retain": False
+        "retain": False,
+        "timezone": "UTC" # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     },
     "ble": {
         "hci": 0,                # interface number to scan
@@ -32,8 +33,7 @@ settings = {
         "messages": "updated"    # show messages: new, updated, all
     },
     "devices": {
-    },
-    "timezone": "UTC" # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+    }
 }
 
 

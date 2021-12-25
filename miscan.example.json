@@ -10,7 +10,8 @@
         "qos": 0,
         "topic_namespace": "miscan",
         "retain": true,
-        "changed_messages_only": true
+        "changed_messages_only": true,
+        "timezone": "Europe/Brussels"
     },
     "ble": {
         "hci": 0,
@@ -20,6 +21,5 @@
     "devices": {
         "58:2d:34:00:00:00": "mi1",
         "a4:c1:38:00:00:00": "mi2"
-    },
-    "timezone": "Europe/Brussels"
+    }
 }
