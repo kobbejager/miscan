@@ -7,6 +7,7 @@ from datetime import datetime
 
 from bluepy import btle
 import paho.mqtt.client as mqtt
+import pytz
 
 from devices.base import Device
 
@@ -31,8 +32,8 @@ settings = {
         "messages": "updated"    # show messages: new, updated, all
     },
     "devices": {
-        "58:2d:34:33:e4:48": "living_room"
-    }
+    },
+    "timezone": "UTC" # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 }
 
 
@@ -64,7 +65,7 @@ class ScanDelegate(btle.DefaultDelegate):
                         log.debug(f"Message from {dev.addr} ({dev.rssi} dBm): {message}")
                         message["address"] = dev.addr
                         message["rssi"] = dev.rssi
-                        message["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        message["timestamp"] = datetime.now(pytz.timezone(settings['timezone'])).isoformat('T', 'seconds')
                         message["status"] = status
                         on_mi_message(message)
             if not dev.scanData:

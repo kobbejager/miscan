@@ -12,8 +12,14 @@
         "retain": true,
         "changed_messages_only": true
     },
+    "ble": {
+        "hci": 0,
+        "timeout": 0,
+        "messages": "updated"
+    },
     "devices": {
         "58:2d:34:00:00:00": "mi1",
         "a4:c1:38:00:00:00": "mi2"
-    }
+    },
+    "timezone": "Europe/Brussels"
 }
