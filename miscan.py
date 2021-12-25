@@ -65,7 +65,7 @@ class ScanDelegate(btle.DefaultDelegate):
                         log.debug(f"Message from {dev.addr} ({dev.rssi} dBm): {message}")
                         message["address"] = dev.addr
                         message["rssi"] = dev.rssi
-                        message["timestamp"] = datetime.now(pytz.timezone(settings['timezone'])).isoformat('T', 'seconds')
+                        message["timestamp"] = datetime.now(pytz.timezone(settings['mqtt']['timezone'])).isoformat('T', 'seconds')
                         message["status"] = status
                         on_mi_message(message)
             if not dev.scanData:
