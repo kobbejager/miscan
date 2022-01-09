@@ -171,7 +171,7 @@ def main():
     scanner = btle.Scanner(settings['ble']['hci']).withDelegate(ScanDelegate(settings['ble']['messages']))
 
     log.info("Scanning for devices...")
-    scanner.scan(settings['ble']['timeout'])
+    scanner.scan(settings['ble']['timeout'], passive=True)
 
 
 if __name__ == "__main__":
