@@ -96,7 +96,7 @@ def on_mi_message(message):
         qos=settings['mqtt']['qos'],
         retain=settings['mqtt']['retain'])
 
-    subtopics = ['temperature', 'humidity', 'battery']
+    subtopics = ['temperature', 'humidity', 'battery', 'timestamp']
     for subtopic in subtopics:
         if subtopic in message:
             mqtt_client.publish(
