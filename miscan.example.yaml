@@ -1,0 +1,36 @@
+# miscan configuration. Every setting is shown with its default, except devices.
+
+# MQTT connection. host, port, username and password normally come from .env
+# (MISCAN_MQTT_HOST, ...); every setting here can be overridden as MISCAN_MQTT_<KEY>.
+mqtt:
+  prefix: miscan             # topics: <prefix>/status, <prefix>/<id>/temperature, ...
+  client_id: miscan
+  keepalive: 60
+  qos: 1
+  # password_file: /etc/miscan/mqtt-password   # alternative to MISCAN_MQTT_PASSWORD
+
+ble:
+  # adapter: hci0            # default: BlueZ's default adapter
+  # passive: only listen. active: BlueZ sends scan requests that the sensors answer, which
+  # costs battery. Use active only when passive scanning does not work (see README).
+  scanning_mode: passive
+
+availability:
+  timeout: 900               # seconds without a packet before a sensor is reported offline
+
+discovery:                   # Home Assistant MQTT discovery
+  enabled: true
+  prefix: homeassistant
+  default_entity_ids: true   # sensor.<id>_temperature etc.; needs Home Assistant >= 2025.10
+
+# Only these sensors are published. Run `miscan --scan` to list the sensors in range, or look
+# for "unconfigured sensor" in the log.
+devices:
+  woonkamer:                 # id: used in the MQTT topics; letters, digits, '_' and '-'
+    mac: A4:C1:38:00:00:00
+    name: Woonkamer          # Home Assistant device name (default: the id)
+    area: Woonkamer          # optional: suggested Home Assistant area
+    model: LYWSD03MMC        # optional: shown in Home Assistant
+  slaapkamer:
+    mac: 58:2D:34:00:00:00
+    model: LYWSDCGQ
